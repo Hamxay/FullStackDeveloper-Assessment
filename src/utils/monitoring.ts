@@ -53,14 +53,11 @@ class MonitoringService {
       this.metrics.cacheMisses++;
     }
 
-    // Update average response time
-    const totalTime = this.metrics.averageResponseTime * (this.metrics.totalRequests - 1) + responseTime;
-    this.metrics.averageResponseTime = totalTime / this.metrics.totalRequests;
+    const total = this.metrics.averageResponseTime * (this.metrics.totalRequests - 1) + responseTime;
+    this.metrics.averageResponseTime = total / this.metrics.totalRequests;
 
-    // Update error rate
     this.metrics.errorRate = (this.metrics.failedRequests / this.metrics.totalRequests) * 100;
 
-    // Log request (keep last 1000 logs)
     this.requestLogs.push({
       timestamp: Date.now(),
       method,
@@ -74,7 +71,6 @@ class MonitoringService {
       this.requestLogs.shift();
     }
 
-    // Log to console in development
     if (process.env.NODE_ENV !== 'production') {
       console.log(
         `[${new Date().toISOString()}] ${method} ${path} - ${statusCode} - ${responseTime}ms - ${cached ? 'CACHED' : 'MISS'}`
