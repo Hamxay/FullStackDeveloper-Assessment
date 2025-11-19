@@ -11,21 +11,15 @@ import { getCacheInstance } from './routes/users';
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Set cache instance for response time middleware
 setCacheInstance(getCacheInstance());
 
-// Apply response time middleware to all routes
 app.use(responseTimeMiddleware);
-
-// Apply rate limiting to all routes
 app.use(rateLimitMiddleware);
 
-// Routes
 app.use('/users', usersRouter);
 app.use('/cache', cacheRouter);
 app.get('/cache-status', (req: Request, res: Response) => {
@@ -38,7 +32,6 @@ app.get('/cache-status', (req: Request, res: Response) => {
 });
 app.use('/monitoring', monitoringRouter);
 
-// Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
@@ -46,7 +39,6 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// Root endpoint
 app.get('/', (req: Request, res: Response) => {
   res.json({
     message: 'User Data API',
@@ -63,7 +55,6 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-// Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: Function) => {
   console.error('Error:', err);
   res.status(500).json({
@@ -72,7 +63,6 @@ app.use((err: Error, req: Request, res: Response, next: Function) => {
   });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`API available at http://localhost:${PORT}`);

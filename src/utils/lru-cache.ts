@@ -2,7 +2,7 @@ import { CacheEntry, CacheStats } from '../types';
 
 export class LRUCache<T> {
   private cache: Map<string, CacheEntry<T>>;
-  private maxAge: number; // in milliseconds
+  private maxAge: number;
   private stats: CacheStats;
   private responseTimes: number[];
   private cleanupInterval: NodeJS.Timeout | null = null;
@@ -36,11 +36,8 @@ export class LRUCache<T> {
       return null;
     }
 
-    // Update access time for LRU
     entry.accessTime = now;
     this.stats.hits++;
-    
-    // Move to end (most recently used)
     this.cache.delete(key);
     this.cache.set(key, entry);
 
@@ -55,7 +52,6 @@ export class LRUCache<T> {
       accessTime: now,
     };
 
-    // If key exists, remove it first to update position
     if (this.cache.has(key)) {
       this.cache.delete(key);
     }
@@ -94,7 +90,6 @@ export class LRUCache<T> {
 
   recordResponseTime(time: number): void {
     this.responseTimes.push(time);
-    // Keep only last 1000 response times to prevent memory issues
     if (this.responseTimes.length > 1000) {
       this.responseTimes.shift();
     }
@@ -111,7 +106,6 @@ export class LRUCache<T> {
   }
 
   private startCleanupTask(): void {
-    // Run cleanup every 30 seconds
     this.cleanupInterval = setInterval(() => {
       this.cleanupStaleEntries();
     }, 30000);
@@ -119,15 +113,15 @@ export class LRUCache<T> {
 
   private cleanupStaleEntries(): void {
     const now = Date.now();
-    const keysToDelete: string[] = [];
+    const toDelete: string[] = [];
 
     for (const [key, entry] of this.cache.entries()) {
       if (now - entry.timestamp > this.maxAge) {
-        keysToDelete.push(key);
+        toDelete.push(key);
       }
     }
 
-    keysToDelete.forEach(key => this.cache.delete(key));
+    toDelete.forEach(key => this.cache.delete(key));
     this.stats.size = this.cache.size;
   }
 

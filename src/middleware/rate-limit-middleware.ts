@@ -8,7 +8,6 @@ export function rateLimitMiddleware(
   res: Response,
   next: NextFunction
 ): void {
-  // Use IP address as identifier (in production, consider using user ID if authenticated)
   const identifier = req.ip || req.socket.remoteAddress || 'unknown';
 
   const { allowed, resetTime } = rateLimiter.isAllowed(identifier);
@@ -25,9 +24,8 @@ export function rateLimitMiddleware(
     return;
   }
 
-  // Add rate limit headers
   res.setHeader('X-RateLimit-Limit', '10');
-  res.setHeader('X-RateLimit-Remaining', '9'); // Simplified, could be more accurate
+  res.setHeader('X-RateLimit-Remaining', '9');
 
   next();
 }

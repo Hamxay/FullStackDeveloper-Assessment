@@ -3,10 +3,6 @@ import { monitoringService } from '../utils/monitoring';
 
 const router = Router();
 
-/**
- * GET /monitoring/metrics
- * Get performance metrics
- */
 router.get('/metrics', (req: Request, res: Response) => {
   const metrics = monitoringService.getMetrics();
   res.json({
@@ -16,10 +12,6 @@ router.get('/metrics', (req: Request, res: Response) => {
   });
 });
 
-/**
- * GET /monitoring/logs
- * Get recent request logs
- */
 router.get('/logs', (req: Request, res: Response) => {
   const limit = parseInt(req.query.limit as string, 10) || 100;
   const logs = monitoringService.getRecentLogs(limit);

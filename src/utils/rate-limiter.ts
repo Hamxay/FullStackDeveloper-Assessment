@@ -4,7 +4,7 @@ export class RateLimiter {
   private requests: Map<string, RateLimitInfo[]>;
   private maxRequestsPerMinute: number;
   private burstCapacity: number;
-  private burstWindow: number; // in milliseconds
+  private burstWindow: number;
 
   constructor(
     maxRequestsPerMinute: number = 10,
@@ -16,7 +16,6 @@ export class RateLimiter {
     this.burstCapacity = burstCapacity;
     this.burstWindow = burstWindow;
     
-    // Cleanup old entries every minute
     setInterval(() => {
       this.cleanup();
     }, 60000);
@@ -24,40 +23,26 @@ export class RateLimiter {
 
   isAllowed(identifier: string): { allowed: boolean; resetTime?: number } {
     const now = Date.now();
-    let userRequests = this.requests.get(identifier) || [];
+    let requests = this.requests.get(identifier) || [];
 
-    // Remove old requests outside the 1-minute window
-    userRequests = userRequests.filter(
-      req => now - req.resetTime < 60000
-    );
+    requests = requests.filter(req => now - req.resetTime < 60000);
 
-    // Check burst limit (last 10 seconds)
-    const recentRequests = userRequests.filter(
-      req => now - req.resetTime < this.burstWindow
-    );
+    const recent = requests.filter(req => now - req.resetTime < this.burstWindow);
 
-    if (recentRequests.length >= this.burstCapacity) {
-      const oldestRecentRequest = recentRequests[0];
-      const resetTime = oldestRecentRequest.resetTime + this.burstWindow;
-      this.requests.set(identifier, userRequests);
+    if (recent.length >= this.burstCapacity) {
+      const resetTime = recent[0].resetTime + this.burstWindow;
+      this.requests.set(identifier, requests);
       return { allowed: false, resetTime };
     }
 
-    // Check per-minute limit
-    if (userRequests.length >= this.maxRequestsPerMinute) {
-      const oldestRequest = userRequests[0];
-      const resetTime = oldestRequest.resetTime + 60000;
-      this.requests.set(identifier, userRequests);
+    if (requests.length >= this.maxRequestsPerMinute) {
+      const resetTime = requests[0].resetTime + 60000;
+      this.requests.set(identifier, requests);
       return { allowed: false, resetTime };
     }
 
-    // Allow request
-    userRequests.push({
-      count: 1,
-      resetTime: now,
-    });
-
-    this.requests.set(identifier, userRequests);
+    requests.push({ count: 1, resetTime: now });
+    this.requests.set(identifier, requests);
     return { allowed: true };
   }
 

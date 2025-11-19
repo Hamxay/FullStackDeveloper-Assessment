@@ -9,7 +9,6 @@ export function setCacheInstance(cache: LRUCache<User>): void {
   cacheInstance = cache;
 }
 
-// Extend Request interface to include cache status
 declare global {
   namespace Express {
     interface Request {
@@ -31,7 +30,6 @@ export function responseTimeMiddleware(
       cacheInstance.recordResponseTime(duration);
     }
     
-    // Record in monitoring service
     monitoringService.recordRequest(
       req.method,
       req.path,

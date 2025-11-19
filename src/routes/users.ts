@@ -5,10 +5,9 @@ import { fetchUserFromDatabase, addUserToDatabase, getAllUsers } from '../utils/
 import { User } from '../types';
 
 const router = Router();
-const cache = new LRUCache<User>(60000); // 60 seconds TTL
+const cache = new LRUCache<User>(60000);
 const asyncQueue = new AsyncQueue();
 
-// Store cache instance for middleware
 let cacheInstance: LRUCache<User> | null = null;
 
 export function getCacheInstance(): LRUCache<User> {
@@ -18,58 +17,49 @@ export function getCacheInstance(): LRUCache<User> {
   return cacheInstance;
 }
 
-/**
- * GET /users/:id
- * Retrieve user data by ID with caching
- */
 router.get('/:id', async (req: Request, res: Response) => {
-  const startTime = Date.now();
+  const start = Date.now();
   const userId = parseInt(req.params.id, 10);
 
   if (isNaN(userId)) {
-    res.status(400).json({
+    return res.status(400).json({
       error: 'Invalid user ID',
       message: 'User ID must be a valid number',
     });
-    return;
   }
 
-  // Check cache first
-  const cacheKey = `user:${userId}`;
-  const cachedUser = cache.get(cacheKey);
+  const key = `user:${userId}`;
+  const cached = cache.get(key);
 
-  if (cachedUser) {
-    const responseTime = Date.now() - startTime;
-    cache.recordResponseTime(responseTime);
-    req._cached = true; // Mark request as cached for monitoring
-    res.json({
-      ...cachedUser,
+  if (cached) {
+    const time = Date.now() - start;
+    cache.recordResponseTime(time);
+    req._cached = true;
+    return res.json({
+      ...cached,
       _cached: true,
-      _responseTime: responseTime,
+      _responseTime: time,
     });
-    return;
   }
 
-  // If not in cache, use async queue to fetch from database
   try {
     const user = await asyncQueue.enqueue(userId, fetchUserFromDatabase);
     
-    // Only cache if not already cached (to avoid race conditions)
-    if (!cache.has(cacheKey)) {
-      cache.set(cacheKey, user);
+    if (!cache.has(key)) {
+      cache.set(key, user);
     }
 
-    const responseTime = Date.now() - startTime;
-    cache.recordResponseTime(responseTime);
-    req._cached = false; // Mark request as not cached for monitoring
+    const time = Date.now() - start;
+    cache.recordResponseTime(time);
+    req._cached = false;
     res.json({
       ...user,
       _cached: false,
-      _responseTime: responseTime,
+      _responseTime: time,
     });
   } catch (error) {
-    const responseTime = Date.now() - startTime;
-    cache.recordResponseTime(responseTime);
+    const time = Date.now() - start;
+    cache.recordResponseTime(time);
     
     if (error instanceof Error && error.message.includes('not found')) {
       res.status(404).json({
@@ -85,39 +75,30 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /users
- * Create a new user
- */
 router.post('/', (req: Request, res: Response) => {
   const { name, email } = req.body;
 
   if (!name || !email) {
-    res.status(400).json({
+    return res.status(400).json({
       error: 'Validation error',
       message: 'Name and email are required',
     });
-    return;
   }
 
-  // Generate new ID (simple increment, in production use proper ID generation)
-  const existingUsers = getAllUsers();
-  const newId = Math.max(...existingUsers.map(u => u.id), 0) + 1;
+  const users = getAllUsers();
+  const newId = Math.max(...users.map(u => u.id), 0) + 1;
 
-  const newUser: User = {
+  const user: User = {
     id: newId,
     name: String(name),
     email: String(email),
   };
 
-  addUserToDatabase(newUser);
-
-  // Cache the new user
-  const cacheKey = `user:${newId}`;
-  cache.set(cacheKey, newUser);
+  addUserToDatabase(user);
+  cache.set(`user:${newId}`, user);
 
   res.status(201).json({
-    ...newUser,
+    ...user,
     message: 'User created successfully',
   });
 });
